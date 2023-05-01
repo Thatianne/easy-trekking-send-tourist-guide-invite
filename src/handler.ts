@@ -38,7 +38,7 @@ const sendEmail = async () => {
 
   for (let i = 0; i < groups.length; i++) {
     const group = groups[i];
-    const trekking = await trekkingRepository.findOneOrFail({
+    const trekking = await trekkingRepository.findOne({
       where: {
         id: group.trekking.id,
         touristGuides: {
@@ -50,15 +50,21 @@ const sendEmail = async () => {
       }
     });
 
+    if (!trekking) {
+      console.log('Group has no tourist guide available', group);
+      return;
+    }
+
     if (trekking.touristGuides.length > 0) {
+      const touristGuideInvited = trekking.touristGuides[0];
       let emailParams: AWS.SES.SendEmailRequest = {
         Destination: {
-          ToAddresses: [trekking.touristGuides[0].email]
+          ToAddresses: [touristGuideInvited.email]
         },
         Message: {
           Body: {
             Text: {
-              Data: 'Você foi convidado para guiar no trekking ${group.trekking.name} no dia ${group.date}. Confirme em até 24hrs através do link Quero guiar',
+              Data: `Você foi convidado para guiar no trekking ${group.trekking.name} no dia ${group.date}. Confirme em até 24 horas através do link ${process.env.APP_HOST}/invite/accept?groupId=${group.id}&touristGuideId=${touristGuideInvited.id}`,
               Charset: 'UTF-8'
             }
           },
@@ -72,10 +78,10 @@ const sendEmail = async () => {
 
       await ses.sendEmail(emailParams).promise();
 
-      group.lastTouristGuideInvited = trekking.touristGuides[0];
+      group.lastTouristGuideInvited = touristGuideInvited;
       await groupRepository.save(group);
 
-      console.log('>>> E-mail sent:', group, trekking.touristGuides[0]);
+      console.log('>>> E-mail sent:', group, touristGuideInvited);
     }
   }
 };
