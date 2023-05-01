@@ -16,7 +16,7 @@ AWS.config.update({
 let ses = new AWS.SES();
 
 const sendEmail = async () => {
-  if (!AppDataSource.isConnected) {
+  if (!AppDataSource.isInitialized) {
     await AppDataSource.initialize();
   }
 
